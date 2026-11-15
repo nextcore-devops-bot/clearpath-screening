@@ -36,7 +36,7 @@ export const VENDOR_TEST_PHONES:Record<string,string>={
 };
 /** A US phone number as (NXX) NXX-XXXX, from 10 digits or 11 starting with 1; null when it is not one. */
 export function formatUsPhone(value:unknown){
-  if(typeof value!=="string"||value.length>40)return null;
+  if(typeof value!=="string"||value.length>40||!/^[\d\s().+-]*$/.test(value))return null;
   const digits=value.replace(/\D/g,""),ten=digits.length===11&&digits.startsWith("1")?digits.slice(1):digits;
   return /^[2-9]\d{2}[2-9]\d{6}$/.test(ten)?`(${ten.slice(0,3)}) ${ten.slice(3,6)}-${ten.slice(6)}`:null;
 }
@@ -112,10 +112,12 @@ function schema(db: Database.Database) {
   if(!billingColumns.has("resolved_by"))db.exec("ALTER TABLE cp_billing ADD COLUMN resolved_by TEXT");
   if(!billingColumns.has("resolved_at"))db.exec("ALTER TABLE cp_billing ADD COLUMN resolved_at TEXT");
   const vendorColumns = new Set((db.prepare("PRAGMA table_info(cp_vendors)").all() as Array<{name:string}>).map(column=>column.name));
-  if(!vendorColumns.has("phone"))db.exec("ALTER TABLE cp_vendors ADD COLUMN phone TEXT");
-  // Only a seeded vendor with no phone yet: a phone someone typed is kept.
-  const seedPhone=db.prepare("UPDATE cp_vendors SET phone=? WHERE name=? AND COALESCE(phone,'')=''");
-  for(const [name,phone] of Object.entries(VENDOR_TEST_PHONES))seedPhone.run(phone,name);
+  if(!vendorColumns.has("phone")){
+    db.exec("ALTER TABLE cp_vendors ADD COLUMN phone TEXT");
+    // Once, when the column is added: seeded vendors get their made-up phone. A phone cleared later stays cleared.
+    const seedPhone=db.prepare("UPDATE cp_vendors SET phone=? WHERE name=? AND COALESCE(phone,'')=''");
+    for(const [name,phone] of Object.entries(VENDOR_TEST_PHONES))seedPhone.run(phone,name);
+  }
   db.exec("UPDATE cp_orders SET hiring_location=COALESCE(NULLIF(hiring_location,''),'Denver, CO'),recruiter=COALESCE(NULLIF(recruiter,''),'Alyssa Moore'),updated_at=COALESCE(NULLIF(updated_at,''),order_date || ' 08:00:00')");
 }
 

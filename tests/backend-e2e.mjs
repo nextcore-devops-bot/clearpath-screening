@@ -230,6 +230,7 @@ try{
   const createdVendorId=vendorPost.data.vendor.id;assert.equal(vendorPost.data.vendor.preferred,false);assertions++;
   assert.equal(vendorPost.data.vendor.phone,"(720) 555-0107");assertions++;
   await expectStatus(`/api/clearpath/vendors/${createdVendorId}`,400,{method:"PATCH",cookie:sessions.admin,body:{phone:"not a phone"}});
+  await expectStatus(`/api/clearpath/vendors/${createdVendorId}`,400,{method:"PATCH",cookie:sessions.admin,body:{phone:"call 720 555 0109 now"}});
   assert.equal((await expectStatus(`/api/clearpath/vendors/${createdVendorId}`,200,{method:"PATCH",cookie:sessions.admin,body:{phone:""}})).data.vendor.phone,null);assertions++;
   await expectStatus("/api/clearpath/vendors",400,{method:"POST",cookie:sessions.operations,body:{name:"Rocky Mountain Verification",coverage:"Employment",jurisdictions:"CO",turnaround:"2 days",cost:25,quality:90,preferred:false,status:"Active",contact:"duplicate@rockymountain.example"}});
   const vendorPatch=await expectStatus(`/api/clearpath/vendors/${createdVendorId}`,200,{method:"PATCH",cookie:sessions.admin,body:{quality:98,preferred:true,turnaround:"1.6 days",note:"Preferred after quality review."}});
